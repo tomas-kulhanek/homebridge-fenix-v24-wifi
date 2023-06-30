@@ -1,15 +1,20 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import {
+  API,
+  DynamicPlatformPlugin,
+  Logger,
+  PlatformAccessory,
+  PlatformConfig,
+  Characteristic,
+} from 'homebridge';
 
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { ExamplePlatformAccessory } from './platformAccessory';
+import {PLATFORM_NAME, PLUGIN_NAME} from './settings';
+import {FenixV24ThermostatPlatformAccessory} from './platformAccessory';
+import ThermostatApi from './Api/ThermostatApi';
+import FenixApi from './Api/FenixApi';
+import TokenManager from './TokenManager';
+import {BLUE, GREY, RED, RESET, GREEN, LIGHT_GREY} from './colors';
 
-/**
- * HomebridgePlatform
- * This class is the main constructor for your plugin, this is where you should
- * parse the user config and discover/register accessories with Homebridge.
- */
-export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
-  public readonly Service: typeof Service = this.api.hap.Service;
+export class FenixV24WifiPlatform implements DynamicPlatformPlugin {
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
   // this is used to track restored cached accessories
@@ -20,97 +25,120 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    this.log.debug('Finished initializing platform:', this.config.name);
-
-    // When this event is fired it means Homebridge has restored all cached accessories from disk.
-    // Dynamic Platform plugins should only register new accessories after this event was fired,
-    // in order to ensure they weren't added to homebridge already. This event can also be used
-    // to start discovery of new accessories.
+    this.log.debug('Finished initializing platform');
     this.api.on('didFinishLaunching', () => {
-      log.debug('Executed didFinishLaunching callback');
-      // run the method to discover / register your devices as accessories
-      this.discoverDevices();
+      log.debug(`${GREY}Executed didFinishLaunching callback${RESET}`);
+      this.initAccessories()
+        .then(() => this.log.info(`${GREEN}Initialized${RESET}`))
+        .catch((error) => this.log.error(`Initialize of plugin was failed ${error}`));
     });
   }
 
-  /**
-   * This function is invoked when homebridge restores cached accessories from disk at startup.
-   * It should be used to setup event handlers for characteristics and update respective values.
-   */
   configureAccessory(accessory: PlatformAccessory) {
     this.log.info('Loading accessory from cache:', accessory.displayName);
 
-    // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
   }
 
-  /**
-   * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
-   */
-  discoverDevices() {
-
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    const exampleDevices = [
-      {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
-      },
-      {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
-      },
-    ];
-
-    // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
-
-      // generate a unique id for the accessory this should be generated from
-      // something globally unique, but constant, for example, the device serial
-      // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
-
-      // see if an accessory with the same uuid has already been registered and restored from
-      // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
-
-      if (existingAccessory) {
-        // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
-
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, existingAccessory);
-
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-        // remove platform accessories when no longer present
-        // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
-      } else {
-        // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.exampleDisplayName);
-
-        // create a new accessory
-        const accessory = new this.api.platformAccessory(device.exampleDisplayName, uuid);
-
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
-
-        // create the accessory handler for the newly create accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
-
-        // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+  async initAccessories() {
+    const tokenManager = new TokenManager(
+      this.config.accessToken,
+      this.config.refreshToken,
+      this.log,
+      this.api,
+    );
+    await tokenManager.loadInitialTokens();
+    const fenixApi = new FenixApi(tokenManager);
+    fenixApi.readMyInformation().then((data) => {
+      const devices: { uuid: string; name: string }[] = [];
+      for (const home of data.data) {
+        for (const room of home.rooms) {
+          for (const sensor of room.sensors) {
+            devices.push({'name': sensor.S2, 'uuid': sensor.S1});
+          }
+        }
       }
+
+      const activeUUIDs: Array<string> = [];
+      const toRegister: Array<PlatformAccessory> = [];
+      const toUpdate: Array<PlatformAccessory> = [];
+      const toUnregister: Array<PlatformAccessory> = [];
+
+      for (const device of devices) {
+        const uuid = this.api.hap.uuid.generate(device.uuid);
+        activeUUIDs.push(uuid);
+
+        const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+
+        const tsApi = new ThermostatApi(device.uuid, tokenManager);
+        if (existingAccessory) {
+          this.log.info(
+            this.colorizedThermostatIdentifications(device) + 'Restoring existing Fenix V24 thermostat from cache',
+          );
+          existingAccessory.context.device = device;
+          existingAccessory.displayName = device.name;
+          this.createThermostat(existingAccessory, tsApi);
+          toUpdate.push(existingAccessory);
+          continue;
+        }
+
+        this.log.info(
+          this.colorizedThermostatIdentifications(device) + 'Adding new Fenix V24 thermostat',
+        );
+        const accessory = new this.api.platformAccessory(device.name, uuid);
+        accessory.context.device = device;
+        this.createThermostat(accessory, tsApi);
+        toRegister.push(accessory);
+      }
+
+      for (const accessory of this.accessories) {
+        if (!activeUUIDs.includes(accessory.UUID)) {
+          this.log.debug(
+            this.colorizedThermostatIdentifications(accessory.context.device)
+            + `${RED}Removing unused Fenix V24 thermostat accessory ${RESET}`,
+          );
+          toUnregister.push(accessory);
+        }
+      }
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, toRegister);
+      try {
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, toUnregister);
+      } catch (error) {
+        this.log.error(`Error while unregistering accessories: ${error}`);
+      }
+      try {
+        this.api.updatePlatformAccessories(toUpdate);
+      } catch (error) {
+        this.log.error(`Error while updating accessories: ${error}`);
+      }
+    }).catch((error) => this.log.error(`Cannot to retrieve base data. Do you have valid token? ${error}`));
+  }
+
+  private getTemperatureCheckInterval(): number {
+    this.log.debug(`${GREY}Thermostat check interval is ${this.config.temperatureCheckInterval || 30} minutes${RESET}`);
+    return (this.config.temperatureCheckInterval || 30) * 60000;
+  }
+
+  private get temperatureUnit(): number {
+    if (this.config.temperatureUnit === 1) {
+      return this.Characteristic.TemperatureDisplayUnits.FAHRENHEIT;
     }
+    return this.Characteristic.TemperatureDisplayUnits.CELSIUS;
+  }
+
+  private createThermostat(accessory, tsApi: ThermostatApi): FenixV24ThermostatPlatformAccessory {
+    const thermostat = new FenixV24ThermostatPlatformAccessory(
+      this,
+      accessory,
+      tsApi,
+      this.temperatureUnit,
+      this.getTemperatureCheckInterval(),
+    );
+    thermostat.initialize();
+    return thermostat;
+  }
+
+  private colorizedThermostatIdentifications(device: { uuid: string; name: string }): string {
+    return `${LIGHT_GREY}[${device.uuid}]${RESET} ${BLUE}[${device.name}]${RESET}: `;
   }
 }

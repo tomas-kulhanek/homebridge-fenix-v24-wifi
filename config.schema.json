@@ -1,15 +1,54 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "FenixV24Wifi",
   "pluginType": "platform",
   "singular": true,
   "schema": {
     "type": "object",
     "properties": {
       "name": {
-        "title": "Name",
+        "type": "string",
+        "title": "Plugin Name",
+        "required": true,
+        "placeholder": "Fenix V24 Wifi",
+        "description": "Name to use for Homebridge logging purposes. Default: Fenix V24 Wifi."
+      },
+      "accessToken": {
+        "title": "Email",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": ""
+      },
+      "refreshToken": {
+        "title": "Password",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "temperatureCheckInterval": {
+        "title": "Temperature check interval in minutes",
+        "type": "number",
+        "required": true,
+        "default": "30"
+      },
+      "temperatureUnit": {
+        "type": "number",
+        "title": "Temperature units",
+        "default": 0,
+        "oneOf": [
+          {
+            "title": "Celsius",
+            "enum": [
+              0
+            ]
+          },
+          {
+            "title": "Fahrenheit",
+            "enum": [
+              1
+            ]
+          }
+        ],
+        "required": true
       }
     }
   }
