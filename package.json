@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge Fenix V24 Wifi thermostats",
   "name": "homebridge-fenix-v24-wifi",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Homebridge plugin which adds a Fenix V24 WiFi thermostat as HomeKit device.",
   "license": "Apache-2.0",
   "author": {
