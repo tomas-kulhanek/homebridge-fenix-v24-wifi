@@ -1,36 +1,38 @@
 export default interface ThermostatResponse {
-
-  A1: { timestamp: number; wattType: string; value: string };
-  // eslint-disable-next-line max-len
-  At: { timestamp: number; aggregators: string[]; wattsType: string; unit: string; value: number; divFactor: number; min: number; max: number };
-  Bt: { timestamp: number; wattType: string; value: string; min: number };
-  Cg: { timestamp: number; wattType: string; value: number[] };
-  Cm: { timestamp: number; wattType: string; value: string; min: number };
-  Co: { timestamp: number; wattType: string; value: string };
-  Dd: { timestamp: number; wattType: string; value: string };
-  Dm: { timestamp: number; wattType: string; value: number; min: number; max: number };
-  Er: { timestamp: number; wattType: string; value: number[] };
-  Gp: { timestamp: number; wattType: string; value: string };
-  'H1': { timestamp: number; wattType: string; value: string };
-  'H2': { timestamp: number; wattType: string; value: string };
-  'H3': { timestamp: number; wattType: string; value: number[] };
-  'H4': { timestamp: number; wattType: string; value: number };
-  'Hs': { timestamp: number; wattType: string; value: number };
-  Id: { timestamp: number; wattType: string; value: string };
-  Ma: { timestamp: number; wattType: string; value: number; unit: string; divFactor: number; min: number; max: number; increment: 5 };
-  Pf: { timestamp: number; wattType: string; value: number[] };
-  Rn: { timestamp: number; wattType: string; value: string }; //Thermostat name
-  'S1': { timestamp: number; wattType: string; value: string }; // ID
-  'S2': { timestamp: number; wattType: string; value: string };
-  'S3': { timestamp: number; wattType: string; value: number };
-  Sp: { timestamp: number; wattType: string; value: string; unit: string; divFactor: number; min: number; max: number };
-  St: { timestamp: number; wattType: string; value: number };
-  Sv: { timestamp: number; wattType: string; value: string }; // Software version
-  Ty: { timestamp: number; wattType: string; value: string }; //Type 
-  Tz: { timestamp: number; wattType: string; value: string }; //Time zone
-  Un: { timestamp: number; wattType: string; value: number };
-  Vs: { timestamp: number; wattType: string; value: string };
-  bo: { timestamp: number; wattType: string; value: number; unit: string; divFactor: number; min: number; max: number };
-  df: { timestamp: number; wattType: string; value: number; unit: string; divFactor: number; min: number; max: number };
-  fc: { timestamp: number; wattType: string; value: number };
+    id: string;
+    id_device: string;
+    nom_appareil: string;
+    num_zone: string;
+    id_appareil: string;
+    programme: string;
+    consigne_confort: string;
+    consigne_hg: string;
+    consigne_eco: string;
+    consigne_boost: string;
+    consigne_manuel: string;
+    min_set_point: string;
+    max_set_point: string;
+    date_start_boost: null;
+    time_boost: string;
+    nv_mode: string;
+    temperature_air: string;
+    temperature_sol: string;
+    on_off: string;
+    pourcent_light: string;
+    status_com: string;
+    recep_status_global: string;
+    gv_mode: string;
+    puissance_app: string;
+    smarthome_id: string;
+    bundle_id: string;
+    date_update: string;
+    label_interface: string;
+    heating_up: string;
+    error_code: string;
+    heat_cool: string;
+    fan_speed: string;
+    bit_override: string;
+    fan_error: null;
+    time_boost_format_chrono: { d: string; h: string; m: string; s: string };
 }
+

@@ -23,50 +23,59 @@ export default class ThermostatData {
   }
 
   get currentHeatingCoolingState(): number {
-    if (this.mode === ThermostatMode.OFF || this.actualTemperature >= this.requiredTemperature) {
+    if (this.mode === ThermostatMode.OFF || this.data.heating_up !== '1') {
       return 0;
     }
     return 1;
   }
 
   get mode(): ThermostatMode {
-    if (this.data.Dm.value === ThermostatMode.OFF) {
+    if (this.data.gv_mode === ThermostatMode.OFF) {
       return ThermostatMode.OFF;
     }
-    if (this.data.Dm.value === ThermostatMode.AUTO) {
+    if (this.data.gv_mode === ThermostatMode.AUTO) {
       return ThermostatMode.AUTO;
     }
-    if (this.data.Dm.value === ThermostatMode.ANTIFREEZE) {
+    if (this.data.gv_mode === ThermostatMode.ANTIFREEZE) {
       return ThermostatMode.ANTIFREEZE;
     }
     return ThermostatMode.MANUAL;
   }
 
   set mode(mode: ThermostatMode) {
-    this.data.Dm.value = mode;
+    this.data.gv_mode = mode.valueOf();
   }
 
   get actualTemperature(): number {
-    return this.data.At.value / this.data.At.divFactor;
+    return parseInt(this.data.temperature_air) / 10;
   }
 
   get requiredTemperature(): number {
-    return this.data.Ma.value / this.data.Ma.divFactor;
+    if (this.mode === ThermostatMode.OFF) {
+      return 41;
+    }
+    if (this.mode === ThermostatMode.AUTO) {
+      return parseInt(this.data.consigne_confort) / 10;
+    }
+    if (this.mode === ThermostatMode.ANTIFREEZE) {
+      return parseInt(this.data.consigne_hg) / 10;
+    }
+    return parseInt(this.data.consigne_manuel) / 10;
   }
 
   set requiredTemperature(temperature: number) {
-    this.data.Ma.value = temperature * this.data.Ma.divFactor;
+    this.data.consigne_manuel = '' + (temperature * 10);
   }
 
   get realRequiredTemperature(): number {
-    return this.data.Ma.value;
+    return parseInt(this.data.consigne_manuel);
   }
 
   get model(): string {
-    return this.data.Ty.value;
+    return 'KP';
   }
 
   get softwareVersion(): string {
-    return this.data.Sv.value;
+    return 'MMM';
   }
 }

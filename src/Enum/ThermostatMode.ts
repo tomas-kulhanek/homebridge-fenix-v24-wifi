@@ -1,6 +1,6 @@
 export enum ThermostatMode {
-  OFF = 0,
-  AUTO = 2,
-  ANTIFREEZE = 4,
-  MANUAL = 6
+  OFF = '1',
+  AUTO = '8',
+  ANTIFREEZE = '2',
+  MANUAL = '6'
 }

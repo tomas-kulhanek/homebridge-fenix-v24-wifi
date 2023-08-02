@@ -12,17 +12,22 @@
         "placeholder": "Fenix V24 Wifi",
         "description": "Name to use for Homebridge logging purposes. Default: Fenix V24 Wifi."
       },
-      "accessToken": {
+      "email": {
         "title": "Email",
         "type": "string",
         "required": true,
         "default": ""
       },
-      "refreshToken": {
+      "password": {
         "title": "Password",
         "type": "string",
         "required": true,
         "default": ""
+      },
+      "smarthomeId": {
+        "title": "Smarthome id",
+        "type": "integer",
+        "required": true
       },
       "temperatureCheckInterval": {
         "title": "Temperature check interval in minutes",

@@ -42,20 +42,22 @@ export class FenixV24WifiPlatform implements DynamicPlatformPlugin {
 
   async initAccessories() {
     const tokenManager = new TokenManager(
-      this.config.accessToken,
-      this.config.refreshToken,
+      this.config.email,
+      this.config.password,
       this.log,
       this.api,
     );
     await tokenManager.loadInitialTokens();
+    await tokenManager.refreshTokens();
     const fenixApi = new FenixApi(tokenManager);
-    fenixApi.readMyInformation().then((data) => {
+
+    fenixApi.readMyInformation(this.config.smarthomeId).then((data) => {
       const devices: { uuid: string; name: string }[] = [];
-      for (const home of data.data) {
-        for (const room of home.rooms) {
-          for (const sensor of room.sensors) {
-            devices.push({'name': sensor.S2, 'uuid': sensor.S1});
-          }
+      const zones = data.data.data.zones;
+      for (const zone in data.data.data.zones) {
+        const fdevices = zones[zone].devices;
+        for (const device in fdevices) {
+          devices.push({'name': zones[zone].zone_label, 'uuid': fdevices[device].id_device});
         }
       }
 
@@ -70,7 +72,7 @@ export class FenixV24WifiPlatform implements DynamicPlatformPlugin {
 
         const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
-        const tsApi = new ThermostatApi(device.uuid, tokenManager);
+        const tsApi = new ThermostatApi(device.uuid, tokenManager, this.config.smarthomeId, fenixApi);
         if (existingAccessory) {
           this.log.info(
             this.colorizedThermostatIdentifications(device) + 'Restoring existing Fenix V24 thermostat from cache',

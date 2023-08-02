@@ -2,6 +2,7 @@ import axios, {Axios} from 'axios';
 import TokenManager from '../TokenManager';
 import {ThermostatMode} from '../Enum/ThermostatMode';
 import ThermostatData from '../DTO/ThermostatData';
+import FenixApi from './FenixApi';
 
 export default class ThermostatApi {
 
@@ -10,10 +11,12 @@ export default class ThermostatApi {
   constructor(
     private readonly uuid: string,
     private readonly tokenManager: TokenManager,
+    private readonly smartHomeId: string,
+    private readonly fenixApi:FenixApi,
   ) {
     this.axiosClient = axios.create({
       headers: {
-        'Content-type': 'application/json',
+        'Content-type': 'application/x-www-form-urlencoded',
       },
     });
   }
@@ -22,51 +25,40 @@ export default class ThermostatApi {
 
   getInformation():Promise<ThermostatData> {
     return new Promise((resolve, reject) => {
-      this.axiosClient.get(
-        this.ThermostatApiUrl + '/iotmanagement/v1/configuration/' + this.uuid + '/' + this.uuid + '/v1.0/content',
-        {
-          headers: {Authorization: 'Bearer ' + this.tokenManager.accessToken}
-        },
-      ).then((response) => resolve(new ThermostatData(response.data))).catch((reject));
-    });
-  }
-
-  async changeMode(mode: ThermostatMode) {
-    return await this.axiosClient.put(this.ThermostatApiUrl + '/iotmanagement/v1/devices/twin/properties/config/replace', {
-      'Id_deviceId': this.uuid,
-      'S1': this.uuid,
-      'configurationVersion': 'v1.0',
-      'data': [
-        {
-          'timestamp': null,
-          'wattsType': 'Dm',
-          'wattsTypeValue': mode,
+      this.fenixApi.readMyInformation(this.smartHomeId).then((data) => {
+        const zones = data.data.data.zones;
+        for (const zone in data.data.data.zones) {
+          const fdevices = zones[zone].devices;
+          for (const device in fdevices) {
+            if (fdevices[device].id_device === this.uuid) {
+              resolve(new ThermostatData(fdevices[device]));
+              return;
+            }
+          }
         }
-      ],
-    }, {
-      headers: {Authorization: 'Bearer ' + this.tokenManager.accessToken},
+      }).catch(reject);
     });
   }
 
   async setTemperature(thermostat: ThermostatData) {
-    return await this.axiosClient.put(this.ThermostatApiUrl + '/iotmanagement/v1/devices/twin/properties/config/replace', {
-      'Id_deviceId': this.uuid,
-      'S1': this.uuid,
-      'configurationVersion': 'v1.0',
-      'data': [
-        {
-          'timestamp': null,
-          'wattsType': 'Dm',
-          'wattsTypeValue': thermostat.mode,
-        },
-        {
-          'timestamp': null,
-          'wattsType': 'Ma',
-          'wattsTypeValue': thermostat.realRequiredTemperature,
-        },
-      ],
-    }, {
-      headers: {Authorization: 'Bearer ' + this.tokenManager.accessToken},
-    });
+    const searchParams = new URLSearchParams();
+    searchParams.append('token', this.tokenManager.accessToken);
+    searchParams.append('smarthome_id', this.smartHomeId);
+    searchParams.append('context', '1');
+    searchParams.append('query[id_device]', this.uuid);
+    if (thermostat.mode === ThermostatMode.OFF || thermostat.mode === ThermostatMode.AUTO) {
+      searchParams.append('query[gv_mode]', thermostat.mode.valueOf());
+      searchParams.append('query[nv_mode]', thermostat.mode.valueOf());
+    } else if (thermostat.mode === ThermostatMode.ANTIFREEZE) {
+      searchParams.append('query[gv_mode]', thermostat.mode.valueOf());
+      searchParams.append('query[nv_mode]', thermostat.mode.valueOf());
+      searchParams.append('query[consigne_hg]', '' + thermostat.realRequiredTemperature);
+    } else {
+      searchParams.append('query[gv_mode]', '15');
+      searchParams.append('query[nv_mode]', '15');
+      searchParams.append('query[consigne_manuel]', '' + thermostat.realRequiredTemperature);
+    }
+
+    return await this.axiosClient.post('https://v24.fenixgroup.eu/api/v0.1/human/query/push/', searchParams);
   }
 }

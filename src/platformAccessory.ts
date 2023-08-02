@@ -126,22 +126,18 @@ export class FenixV24ThermostatPlatformAccessory {
       default:
         this.thermostatData.mode = ThermostatMode.MANUAL;
         this.debug('Setting ' + this.cyanize('Manual mode'));
-        this.tApi.setTemperature(this.thermostatData)
-          .then(() => this.info(`${GREEN}Manual mode was set${RESET}`))
-          .catch(() => this.error('Cannot to set mode for thermostat ' + this.accessory.displayName));
-        return;
     }
 
-    this.tApi.changeMode(this.thermostatData.mode)
+    this.tApi.setTemperature(this.thermostatData)
       .then(() => this.info(`${GREEN}Mode was set${RESET}`))
       .catch(() => this.error('Cannot to set mode for thermostat ' + this.accessory.displayName));
   }
 
-  handleCurrentTemperatureGet() {
+  handleCurrentTemperatureGet(){
     if (this.temperatureUnit === this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS) {
       if (!this.thermostatData?.actualTemperature) {
         this.debug('Current temperature ' + this.cyanize('0' + this.stringifyUnit));
-        return 0;
+        return 5;
       }
       const temp = this.fToC(this.thermostatData?.actualTemperature);
       this.debug('Current temperature ' + this.cyanize(temp + this.stringifyUnit));
@@ -157,7 +153,7 @@ export class FenixV24ThermostatPlatformAccessory {
     if (this.temperatureUnit === this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS) {
       if (!this.thermostatData?.requiredTemperature) {
         this.debug('Target temperature is ' + this.cyanize('0' + this.stringifyUnit));
-        return 0;
+        return 5;
       }
 
       const temp = this.fToC(this.thermostatData?.requiredTemperature);
@@ -209,8 +205,7 @@ export class FenixV24ThermostatPlatformAccessory {
     if (informationService) {
       informationService
         .setCharacteristic(this.platform.api.hap.Characteristic.Manufacturer, 'Fenix Trading s.r.o.')
-        .setCharacteristic(this.platform.api.hap.Characteristic.Model, 'Fenix V24 Wifi ' + this.thermostatData.model)
-        .setCharacteristic(this.platform.api.hap.Characteristic.SerialNumber, this.thermostatData.softwareVersion);
+        .setCharacteristic(this.platform.api.hap.Characteristic.Model, 'Fenix V24 Wifi ' + this.thermostatData.model);
     }
   }
 

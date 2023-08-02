@@ -1,5 +1,4 @@
 import { API } from 'homebridge';
-
 import { PLATFORM_NAME } from './settings';
 import { FenixV24WifiPlatform } from './platform';
 
